@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>توقع أسعار المنازل</title>
+    <style>
+        /* --- Basic Styling --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0; /* إزالة الهوامش الافتراضية */
+            background-color: #f4f7f6;
+            color: #333;
+        }
+
+        /* --- Hero Image Container --- */
+        .hero-image {
+            width: 100%;
+            height: 300px; /* يمكنك تعديل الارتفاع حسب رغبتك */
+            overflow: hidden; /* لإخفاء أي أجزاء زائدة من الصورة */
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .hero-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* لجعل الصورة تملأ المساحة مع الحفاظ على أبعادها */
+            object-position: center; /* لتركيز الصورة في المنتصف */
+        }
+
+        /* --- Main Container --- */
+        .container {
+            max-width: 600px;
+            width: 90%; /* تعديل بسيط ليتناسب مع الشاشات الصغيرة */
+            margin: auto;
+            padding: 30px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            margin-top: -80px; /* لرفع النموذج فوق الصورة قليلاً */
+            position: relative; /* ضروري ليعمل margin-top بشكل صحيح */
+            z-index: 10;
+        }
+
+        /* --- Header --- */
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 25px;
+        }
+
+        /* ... باقي تنسيقات CSS تبقى كما هي ... */
+        label {
+            font-weight: bold;
+            margin-top: 15px;
+            display: block;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 25px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            transition: background-color 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .result-box {
+            font-size: 22px;
+            font-weight: bold;
+            margin-top: 25px;
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .prediction {
+            color: #27ae60;
+            background-color: #e8f8f5;
+            border: 1px solid #a3e9d7;
+        }
+
+        .error {
+            color: #e74c3c;
+            background-color: #fdedec;
+            border: 1px solid #f5b7b1;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 1. إضافة حاوية الصورة هنا -->
+<div class="hero-image">
+    <!-- 
+      url_for('static', ...) هي الطريقة الصحيحة في Flask للوصول للملفات الثابتة.
+      قم بتغيير اسم الملف إذا كان مختلفاً.
+    -->
+    <img src="{{ url_for('static', filename='images/pexels-binyaminmellish-106399.jpg') }}" alt="Beautiful modern house">
+</div>
+
+<!-- 2. هذا هو المحتوى الأصلي للصفحة -->
+<div class="container">
+    <h2>توقع أسعار المنازل</h2>
+    
+    <form action="{{ url_for('predict') }}" method="post">
+        
+        <label for="OverallQual">الجودة الإجمالية (1-10)</label>
+        <input type="number" id="OverallQual" name="OverallQual" required min="1" max="10" value="{{ form_data.OverallQual | default(7) }}">
+
+        <label for="GrLivArea">مساحة المعيشة (بالقدم المربع)</label>
+        <input type="number" id="GrLivArea" name="GrLivArea" required value="{{ form_data.GrLivArea | default(1500) }}">
+
+        <label for="YearBuilt">سنة البناء</label>
+        <input type="number" id="YearBuilt" name="YearBuilt" required value="{{ form_data.YearBuilt | default(2005) }}">
+
+        <label for="TotalBsmtSF">مساحة القبو (بالقدم المربع)</label>
+        <input type="number" id="TotalBsmtSF" name="TotalBsmtSF" required value="{{ form_data.TotalBsmtSF | default(850) }}">
+
+        <label for="GarageCars">سعة المرآب (عدد السيارات)</label>
+        <input type="number" id="GarageCars" name="GarageCars" required value="{{ form_data.GarageCars | default(2) }}">
+
+        <label for="FullBath">عدد الحمامات الكاملة</label>
+        <input type="number" id="FullBath" name="FullBath" required value="{{ form_data.FullBath | default(2) }}">
+
+        <label for="Neighborhood">الحي</label>
+        <select id="Neighborhood" name="Neighborhood">
+            {% for hood in neighborhoods %}
+                <option value="{{ hood }}" {% if form_data.Neighborhood == hood %}selected{% endif %}>{{ hood }}</option>
+            {% endfor %}
+        </select>
+        
+        <button type="submit">توقع السعر</button>
+    </form>
+
+    {% if prediction_text %}
+        <div class="result-box {% if 'Error' in prediction_text or 'خطأ' in prediction_text %}error{% else %}prediction{% endif %}">
+            {{ prediction_text }}
+        </div>
+    {% endif %}
+</div>
+
+</body>
+</html>
